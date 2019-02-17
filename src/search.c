@@ -54,11 +54,6 @@ static Score base_ct;
 #define NonPV 0
 #define PV 1
 
-// Sizes and phases of the skip blocks, used for distributing search depths
-// across the threads
-static const int skipSize[20] = {1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4};
-static const int skipPhase[20] = {0, 1, 0, 1, 2, 3, 0, 1, 2, 3, 4, 5, 0, 1, 2, 3, 4, 5, 6, 7};
-
 static const int RazorMargin = 600;
 
 INLINE int futility_margin(Depth d, int improving) {
@@ -67,11 +62,11 @@ INLINE int futility_margin(Depth d, int improving) {
 
 // Futility and reductions lookup tables, initialized at startup
 static int FutilityMoveCounts[2][16]; // [improving][depth]
-static int Reductions[2][2][64][64];  // [pv][improving][depth][moveNumber]
+static int Reductions[2][2][128][64];  // [pv][improving][depth][moveNumber]
 
 INLINE Depth reduction(int i, Depth d, int mn, const int NT)
 {
-  return Reductions[NT][i][min(d / ONE_PLY, 63)][min(mn, 63)] * ONE_PLY;
+  return Reductions[NT][i][min(d / ONE_PLY, 127)][min(mn, 63)] * ONE_PLY;
 }
 
 // History and stats update bonus, based on depth
@@ -129,9 +124,9 @@ static int extract_ponder_from_tt(RootMove *rm, Pos *pos);
 void search_init(void)
 {
   for (int imp = 0; imp <= 1; imp++)
-    for (int d = 1; d < 64; ++d)
+    for (int d = 1; d < 128; ++d)
       for (int mc = 1; mc < 64; ++mc) {
-        double r = log(d) * log(mc) / 1.95;
+        double r = 0.215 * d * (1.0 - exp(-8.0 / d)) * log(mc);
 
         Reductions[NonPV][imp][d][mc] = ((int)lround(r));
         Reductions[PV][imp][d][mc] = max(Reductions[NonPV][imp][d][mc] - 1, 0);
@@ -370,7 +365,7 @@ void mainthread_search(void)
 
 void thread_search(Pos *pos)
 {
-  Value bestValue, alpha, beta, delta;
+  Value bestValue, alpha, beta, delta1, delta2;
   Move pv[MAX_PLY + 1];
   Move lastBestMove = 0;
   Depth lastBestMoveDepth = DEPTH_ZERO;
@@ -389,7 +384,7 @@ void thread_search(Pos *pos)
     ss[i].ply = i;
   ss->pv = pv;
 
-  bestValue = delta = alpha = -VALUE_INFINITE;
+  bestValue = delta1 = delta2 = alpha = -VALUE_INFINITE;
   beta = VALUE_INFINITE;
   pos->completedDepth = DEPTH_ZERO;
 
@@ -423,12 +418,6 @@ void thread_search(Pos *pos)
               && pos->threadIdx == 0
               && pos->rootDepth / ONE_PLY > Limits.depth))
   {
-    // Distribute search depths across the threads
-    if (pos->threadIdx) {
-      int i = (pos->threadIdx - 1) % 20;
-      if (((pos->rootDepth / ONE_PLY + skipPhase[i]) / skipSize[i]) % 2)
-        continue;
-    }
 
     // Age out PV variability metric
     if (pos->threadIdx == 0) {
@@ -469,13 +458,14 @@ void thread_search(Pos *pos)
 
       // Reset aspiration window starting size
       if (pos->rootDepth >= 5 * ONE_PLY) {
-        Value previousScore = rm->move[pvIdx].previousScore;
-        delta = 20;
-        alpha = max(previousScore - delta, -VALUE_INFINITE);
-        beta  = min(previousScore + delta,  VALUE_INFINITE);
+        Value prevScore = rm->move[pvIdx].previousScore;
+        delta1 = (prevScore < 0) ? (Value)((int)(12.0 + 0.07 * abs(prevScore))) : (Value)16;
+        delta2 = (prevScore > 0) ? (Value)((int)(12.0 + 0.07 * abs(prevScore))) : (Value)16;
+        alpha = max(prevScore - delta1,-VALUE_INFINITE);
+        beta  = min(prevScore + delta2, VALUE_INFINITE);
 
         // Adjust contempt based on root move's previousScore
-        int ct = base_ct + (base_ct ? 88 * previousScore / (abs(previousScore) + 200) : 0);
+        int ct = base_ct + (base_ct ? 88 * prevScore / (abs(prevScore) + 200) : 0);
         pos->contempt = pos_stm() == WHITE ?  make_score(ct, ct / 2)
                                            : -make_score(ct, ct / 2);
       }
@@ -514,7 +504,7 @@ void thread_search(Pos *pos)
         // re-search, otherwise exit the loop.
         if (bestValue <= alpha) {
           beta = (alpha + beta) / 2;
-          alpha = max(bestValue - delta, -VALUE_INFINITE);
+          alpha = max(bestValue - delta1, -VALUE_INFINITE);
 
           if (pos->threadIdx == 0) {
             failedHighCnt = 0;
@@ -522,13 +512,14 @@ void thread_search(Pos *pos)
             Signals.stopOnPonderhit = 0;
           }
         } else if (bestValue >= beta) {
-          beta = min(bestValue + delta, VALUE_INFINITE);
+          beta = min(bestValue + delta2, VALUE_INFINITE);
           if (pos->threadIdx == 0)
             failedHighCnt++;
         } else
           break;
 
-        delta += delta / 4 + 5;
+        delta1 += delta1 / 4 + 5;
+        delta2 += delta2 / 4 + 5;
 
         assert(alpha >= -VALUE_INFINITE && beta <= VALUE_INFINITE);
       }
