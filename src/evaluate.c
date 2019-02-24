@@ -471,7 +471,7 @@ INLINE Score evaluate_king(const Pos *pos, EvalInfo *ei, Score *mobility,
 	if (TacticalNew) {
       int mobilityDangerThem = mg_value(mobility[Us] - mobility[Them]);
       kingDangerThem = max(0, kingDangerThem + mobilityDangerThem);
-      score += make_score(kingDangerThem * TacticalNew * kingDangerThem / 4096, 0);
+      score += make_score(kingDangerThem * (TacticalNew * pos->aspirationScore) * kingDangerThem / 4096, 0);
 	}
 
   // Penalty when our king is on a pawnless flank

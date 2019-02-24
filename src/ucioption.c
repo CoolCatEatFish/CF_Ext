@@ -136,7 +136,7 @@ static Option optionsMap[] = {
   { "ProbCut", OPT_TYPE_CHECK, 1, 0, 0, NULL, NULL, 0, NULL },
   { "KingSafe", OPT_TYPE_SPIN, 100, 100, 1500, NULL, NULL, 0, NULL },
   { "Tactical", OPT_TYPE_CHECK, 0, 0, 0, NULL, NULL, 0, NULL },
-  { "TacticalNew", OPT_TYPE_SPIN, 0, 0, 100, NULL, NULL, 0, NULL },
+  { "TacticalNew", OPT_TYPE_SPIN, 1, 0, 100, NULL, NULL, 0, NULL },
   { "LMR", OPT_TYPE_CHECK, 1, 0, 0, NULL, NULL, 0, NULL },
   { "LazyThreshold", OPT_TYPE_CHECK, 0, 0, 0, NULL, NULL, 0, NULL },
   { "NUMA", OPT_TYPE_STRING, 0, 0, 0, "all", on_numa, 0, NULL },

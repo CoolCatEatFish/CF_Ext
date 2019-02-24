@@ -465,6 +465,9 @@ void thread_search(Pos *pos)
         beta  = min(prevScore + delta2, VALUE_INFINITE);
 
         // Adjust contempt based on root move's previousScore
+		int aspSc = 1 + prevScore / (abs(prevScore) + 200);
+		pos->aspirationScore = pos_stm() == WHITE ?  make_score(aspSc, aspSc / 2)
+                                                  : -make_score(aspSc, aspSc / 2);
         int ct = base_ct + (base_ct ? 88 * prevScore / (abs(prevScore) + 200) : 0);
         pos->contempt = pos_stm() == WHITE ?  make_score(ct, ct / 2)
                                            : -make_score(ct, ct / 2);

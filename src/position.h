@@ -159,6 +159,7 @@ struct Pos {
   Depth rootDepth;
   Depth completedDepth;
   Score contempt;
+  Score aspirationScore;
 
   // Pointers to thread-specific tables.
   CounterMoveStat *counterMoves;
