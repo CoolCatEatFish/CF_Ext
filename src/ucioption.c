@@ -139,6 +139,7 @@ static Option optionsMap[] = {
   { "TacticalNew", OPT_TYPE_SPIN, 0, 0, 100, NULL, NULL, 0, NULL },
   { "LMR", OPT_TYPE_CHECK, 1, 0, 0, NULL, NULL, 0, NULL },
   { "LazyThreshold", OPT_TYPE_CHECK, 1, 0, 0, NULL, NULL, 0, NULL },
+  { "Skipping thread scheme", OPT_TYPE_CHECK, 1, 0, 0, NULL, NULL, 0, NULL },
   { "NUMA", OPT_TYPE_STRING, 0, 0, 0, "all", on_numa, 0, NULL },
   { NULL }
 };
