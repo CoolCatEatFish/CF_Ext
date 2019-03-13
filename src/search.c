@@ -67,11 +67,11 @@ INLINE int futility_margin(Depth d, int improving) {
 
 // Futility and reductions lookup tables, initialized at startup
 static int FutilityMoveCounts[2][16]; // [improving][depth]
-static int Reductions[2][64][64];  // [pv][improving][depth][moveNumber]
+static int Reductions[2][128][64];  // [pv][improving][depth][moveNumber]
 
 INLINE Depth reduction(int i, Depth d, int mn, const int NT)
 {
-  return (Reductions[i][min(d / ONE_PLY, 63)][min(mn, 63)] - NT) * ONE_PLY;
+  return (Reductions[i][min(d / ONE_PLY, 127)][min(mn, 63)] - NT) * ONE_PLY;
 }
 
 // History and stats update bonus, based on depth
@@ -129,9 +129,9 @@ static int extract_ponder_from_tt(RootMove *rm, Pos *pos);
 void search_init(void)
 {
   for (int imp = 0; imp <= 1; imp++)
-    for (int d = 1; d < 64; ++d)
+    for (int d = 1; d < 128; ++d)
       for (int mc = 1; mc < 64; ++mc) {
-        double r = log(d) * log(mc) / 1.95;
+        double r = 0.215 * d * (1.0 - exp(-8.0 / d)) * log(mc);
 
         Reductions[imp][d][mc] = ((int)lround(r));
 
@@ -369,7 +369,7 @@ void mainthread_search(void)
 
 void thread_search(Pos *pos)
 {
-  Value bestValue, alpha, beta, delta;
+  Value bestValue, alpha, beta, delta1, delta2;
   Move pv[MAX_PLY + 1];
   Move lastBestMove = 0;
   Depth lastBestMoveDepth = DEPTH_ZERO;
@@ -387,7 +387,7 @@ void thread_search(Pos *pos)
     ss[i].ply = i;
   ss->pv = pv;
 
-  bestValue = delta = alpha = -VALUE_INFINITE;
+  bestValue = delta1 = delta2 = alpha = -VALUE_INFINITE;
   beta = VALUE_INFINITE;
   pos->completedDepth = DEPTH_ZERO;
 
@@ -420,7 +420,7 @@ void thread_search(Pos *pos)
               && pos->rootDepth / ONE_PLY > Limits.depth))
   {
     // Distribute search depths across the threads
-    if (pos->threadIdx) {
+    if (option_value(OPT_SKIP_TH_SCHEME) && pos->threadIdx) {
       int i = (pos->threadIdx - 1) % 20;
       if (((pos->rootDepth / ONE_PLY + skipPhase[i]) / skipSize[i]) % 2)
         continue;
@@ -463,13 +463,14 @@ void thread_search(Pos *pos)
 
       // Reset aspiration window starting size
       if (pos->rootDepth >= 5 * ONE_PLY) {
-        Value previousScore = rm->move[pvIdx].previousScore;
-        delta = 20;
-        alpha = max(previousScore - delta, -VALUE_INFINITE);
-        beta  = min(previousScore + delta,  VALUE_INFINITE);
+        Value prevScore = rm->move[pvIdx].previousScore;
+        delta1 = (prevScore < 0) ? (Value)((int)(12.0 + 0.07 * abs(prevScore))) : (Value)16;
+        delta2 = (prevScore > 0) ? (Value)((int)(12.0 + 0.07 * abs(prevScore))) : (Value)16;
+        alpha = max(prevScore - delta1,-VALUE_INFINITE);
+        beta  = min(prevScore + delta2, VALUE_INFINITE);
 
         // Adjust contempt based on root move's previousScore
-        int ct = base_ct + (base_ct ? 88 * previousScore / (abs(previousScore) + 200) : 0);
+        int ct = base_ct + (base_ct ? 88 * prevScore / (abs(prevScore) + 200) : 0);
         pos->contempt = pos_stm() == WHITE ?  make_score(ct, ct / 2)
                                            : -make_score(ct, ct / 2);
       }
@@ -508,20 +509,21 @@ void thread_search(Pos *pos)
         // re-search, otherwise exit the loop.
         if (bestValue <= alpha) {
           beta = (alpha + beta) / 2;
-          alpha = max(bestValue - delta, -VALUE_INFINITE);
+          alpha = max(bestValue - delta1, -VALUE_INFINITE);
 
           if (pos->threadIdx == 0) {
             failedHighCnt = 0;
             Signals.stopOnPonderhit = 0;
           }
         } else if (bestValue >= beta) {
-          beta = min(bestValue + delta, VALUE_INFINITE);
+          beta = min(bestValue + delta2, VALUE_INFINITE);
           if (pos->threadIdx == 0)
             failedHighCnt++;
         } else
           break;
 
-        delta += delta / 4 + 5;
+        delta1 += delta1 / 4 + 5;
+        delta2 += delta2 / 4 + 5;
 
         assert(alpha >= -VALUE_INFINITE && beta <= VALUE_INFINITE);
       }
