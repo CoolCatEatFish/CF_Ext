@@ -266,12 +266,12 @@ INLINE Score evaluate_piece(const Pos *pos, EvalInfo *ei, Score *mobility,
       bb = OutpostRanks & ~ei->pe->pawnAttacksSpan[Them];
       if (bb & sq_bb(s))
         score += Outpost * (Pt == KNIGHT ? 4 : 2)
-                         * (1 + (bool)(ei->attackedBy[Us][PAWN] & sq_bb(s)));
+                         * (1 + !!(ei->attackedBy[Us][PAWN] & sq_bb(s)));
       else {
         bb &= b & ~pieces_c(Us);
         if (bb)
           score += Outpost * (Pt == KNIGHT ? 2 : 1)
-                           * (1 + (bool)(ei->attackedBy[Us][PAWN] & bb));
+                           * (1 + !!(ei->attackedBy[Us][PAWN] & bb));
       }
 
       // Knight and Bishop bonus for being right behind a pawn
