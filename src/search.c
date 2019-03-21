@@ -420,7 +420,7 @@ void thread_search(Pos *pos)
               && pos->rootDepth / ONE_PLY > Limits.depth))
   {
     // Distribute search depths across the threads
-    if (option_value(OPT_SKIP_TH_SCHEME) && pos->threadIdx) {
+    if (pos->threadIdx) {
       int i = (pos->threadIdx - 1) % 20;
       if (((pos->rootDepth / ONE_PLY + skipPhase[i]) / skipSize[i]) % 2)
         continue;
