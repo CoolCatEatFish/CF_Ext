@@ -54,11 +54,6 @@ static Score base_ct;
 #define NonPV 0
 #define PV 1
 
-// Sizes and phases of the skip blocks, used for distributing search depths
-// across the threads
-static const int skipSize[20] = {1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4};
-static const int skipPhase[20] = {0, 1, 0, 1, 2, 3, 0, 1, 2, 3, 4, 5, 0, 1, 2, 3, 4, 5, 6, 7};
-
 static const int RazorMargin = 600;
 
 INLINE int futility_margin(Depth d, int improving) {
@@ -419,13 +414,6 @@ void thread_search(Pos *pos)
               && pos->threadIdx == 0
               && pos->rootDepth / ONE_PLY > Limits.depth))
   {
-    // Distribute search depths across the threads
-    if (pos->threadIdx) {
-      int i = (pos->threadIdx - 1) % 20;
-      if (((pos->rootDepth / ONE_PLY + skipPhase[i]) / skipSize[i]) % 2)
-        continue;
-    }
-
     // Age out PV variability metric
     if (pos->threadIdx == 0)
       mainThread.bestMoveChanges *= 0.517;
