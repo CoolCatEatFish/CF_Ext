@@ -171,8 +171,7 @@ void pawn_entry_fill(const Pos *pos, PawnEntry *e, Key key)
   e->key = key;
   e->score = pawn_evaluate(pos, e, WHITE) - pawn_evaluate(pos, e, BLACK);
   e->openFiles = popcount(e->semiopenFiles[WHITE] & e->semiopenFiles[BLACK]);
-  e->asymmetry = popcount(e->passedPawns[WHITE] | e->passedPawns[BLACK]
-                        | (e->semiopenFiles[WHITE] ^ e->semiopenFiles[BLACK]));
+  e->passedCount = popcount(e->passedPawns[WHITE] | e->passedPawns[BLACK]);
 }
 
 
