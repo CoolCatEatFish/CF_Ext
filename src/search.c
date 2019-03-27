@@ -386,6 +386,19 @@ void thread_search(Pos *pos)
   int multiPV = option_value(OPT_MULTI_PV);
   if (ICCF) multiPV = ((size_t)pow(2, ICCF));
   if (option_value(OPT_WIDESEARCH)) multiPV=64;
+
+//ThothFish
+  pos->kgA = 1;
+  pos->thB = 1;
+  pos->MagicTacticSolver = 1;
+ 
+  if(option_value(OPT_MagicTacticSolver))
+  {
+  pos->MagicTacticSolver = 1/1000;
+  pos->kgA = 1/100;
+  pos->thB = 100;
+  }
+  
 #if 0
   Skill skill(option_value(OPT_SKILL_LEVEL));
 

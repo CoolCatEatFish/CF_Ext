@@ -73,6 +73,7 @@ enum {
   OPT_TacticalNew,
   OPT_LMR,
   OPT_UseLazy,
+  OPT_MagicTacticSolver,
   OPT_NUMA
 };
 
