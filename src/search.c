@@ -386,6 +386,37 @@ void thread_search(Pos *pos)
   int multiPV = option_value(OPT_MULTI_PV);
   if (ICCF) multiPV = ((size_t)pow(2, ICCF));
   if (option_value(OPT_WIDESEARCH)) multiPV=64;
+
+//ThothFish
+  if(!option_value(OPT_MagicTacticSolver)){
+  pos->MagicTacticSolver = 1;}
+  else if(option_value(OPT_MagicTacticSolver)){
+  pos->MagicTacticSolver = 1/1000;}
+
+  if(pos->MagicTacticSolver == 1/1000){
+  pos->kgA = 1/100;
+  pos->thB = 100;}
+  else if(pos->MagicTacticSolver == 1){
+  pos->kgA = 1;
+  pos->thB = 1;}
+
+/*int pehh = int(Options["Pawn Exchange"])/16;
+int kehh = int(Options["Knight Exchange"])/4;
+int behh = int(Options["Bishop Exchange"])/4;
+int rehh = int(Options["Rook Exchange"])/4;
+int qehh = int(Options["Queen Exchange"])/2;
+
+Pex = (us == WHITE ?  make_score(pehh, pehh / 2)
+                   : -make_score(pehh, pehh / 2));
+Kex = (us == WHITE ?  make_score(kehh, kehh / 2)
+                   : -make_score(kehh, kehh / 2));
+Bex = (us == WHITE ?  make_score(behh, behh / 2)
+                   : -make_score(behh, behh / 2));
+Rex = (us == WHITE ?  make_score(rehh, rehh / 2)
+                   : -make_score(rehh, rehh / 2));
+Qex = (us == WHITE ?  make_score(qehh, qehh / 2)
+                   : -make_score(qehh, qehh / 2));*/
+  
 #if 0
   Skill skill(option_value(OPT_SKILL_LEVEL));
 

@@ -159,6 +159,14 @@ struct Pos {
   Depth rootDepth;
   Depth completedDepth;
   Score contempt;
+  uint16_t MagicTacticSolver;
+  uint16_t kgA;
+  uint16_t thB;
+ // Score Pex;
+ // Score Kex;
+ // Score Bex;
+  //Score Rex;
+  //Score Qex;
 
   // Pointers to thread-specific tables.
   CounterMoveStat *counterMoves;
