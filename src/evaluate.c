@@ -471,7 +471,7 @@ INLINE Score evaluate_king(const Pos *pos, EvalInfo *ei, Score *mobility,
   // Penalty if king flank is under attack, potentially moving toward the king
   score -= FlankAttacks * kingFlankAttacks;
 
-  return score;
+  return score * pos->kgA;
 }
 
 
@@ -579,7 +579,7 @@ INLINE Score evaluate_threats(const Pos *pos, EvalInfo *ei, const int Us)
     score += SliderOnQueen * popcount(b & safe & ei->attackedBy2[Us]);
   }
 
-  return score;
+  return score * pos->thB;
 }
 
 
@@ -777,7 +777,7 @@ Value evaluate(const Pos *pos)
   // in the position struct (material + piece square tables) and the
   // material imbalance. Score is computed internally from the white point
   // of view.
-  Score score = pos_psq_score() + material_imbalance(ei.me) + pos->contempt;
+  Score score = pos_psq_score() * pos->MagicTacticSolver + material_imbalance(ei.me) + pos->contempt;
 
   // Probe the pawn hash table
   ei.pe = pawn_probe(pos);

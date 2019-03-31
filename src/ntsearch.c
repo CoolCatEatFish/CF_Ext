@@ -620,7 +620,8 @@ moves_loop: // When in check search starts from here.
     if (rootNode) pos->st[-1].key ^= pos->rootKeyFlip;
     undo_move(pos, move);
 
-    assert(value > -VALUE_INFINITE && value < VALUE_INFINITE);
+    if(!option_value(OPT_MagicTacticSolver)){
+    assert(value > -VALUE_INFINITE && value < VALUE_INFINITE);}
 
     // Step 19. Check for a new best move
     // Finished searching the move. If a stop occurred, the return value of
@@ -730,7 +731,8 @@ moves_loop: // When in check search starts from here.
         PvNode && bestMove ? BOUND_EXACT : BOUND_UPPER,
         depth, bestMove, pureStaticEval, tt_generation());
 
-  assert(bestValue > -VALUE_INFINITE && bestValue < VALUE_INFINITE);
+  if(!option_value(OPT_MagicTacticSolver)){
+  assert(bestValue > -VALUE_INFINITE && bestValue < VALUE_INFINITE);}
 
   return bestValue;
 }

@@ -385,7 +385,19 @@ void thread_search(Pos *pos)
   ICCF = option_value(OPT_ICCF_Analyzes);
   int multiPV = option_value(OPT_MULTI_PV);
   if (ICCF) multiPV = ((size_t)pow(2, ICCF));
-  if (option_value(OPT_WIDESEARCH)) multiPV=64;
+    if (option_value(OPT_WIDESEARCH)) multiPV=64;
+
+  //ThothFish
+  pos->kgA = 1;
+  pos->thB = 1;
+  pos->MagicTacticSolver = 1;
+
+  if(option_value(OPT_MagicTacticSolver))
+  {
+  pos->MagicTacticSolver = 1/1000;
+  pos->kgA = 1/100;
+  pos->thB = 100;
+  }
 #if 0
   Skill skill(option_value(OPT_SKILL_LEVEL));
 
@@ -643,7 +655,8 @@ static void stable_sort(RootMove *rm, int num)
 
 static Value value_to_tt(Value v, int ply)
 {
-  assert(v != VALUE_NONE);
+  if(!option_value(OPT_MagicTacticSolver)){
+  assert(v != VALUE_NONE);}
 
   return  v >= VALUE_MATE_IN_MAX_PLY  ? v + ply
         : v <= VALUE_MATED_IN_MAX_PLY ? v - ply : v;

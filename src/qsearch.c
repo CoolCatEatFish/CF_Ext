@@ -179,7 +179,8 @@ Value name_NT_InCheck(qsearch)(Pos* pos, Stack* ss, Value alpha, BETA_ARG
 #endif
     undo_move(pos, move);
 
-    assert(value > -VALUE_INFINITE && value < VALUE_INFINITE);
+    if(!option_value(OPT_MagicTacticSolver)){
+    assert(value > -VALUE_INFINITE && value < VALUE_INFINITE);}
 
    	//Add a little variety to play
     int variety;
@@ -215,7 +216,8 @@ Value name_NT_InCheck(qsearch)(Pos* pos, Stack* ss, Value alpha, BETA_ARG
            PvNode && bestValue > oldAlpha  ? BOUND_EXACT : BOUND_UPPER,
            ttDepth, bestMove, ss->staticEval, tt_generation());
 
-  assert(bestValue > -VALUE_INFINITE && bestValue < VALUE_INFINITE);
+  if(!option_value(OPT_MagicTacticSolver)){
+  assert(bestValue > -VALUE_INFINITE && bestValue < VALUE_INFINITE);}
 
   return bestValue;
 }
