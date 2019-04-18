@@ -33,8 +33,8 @@ static const Score Isolated = S( 5, 15);
 static const Score Backward = S( 9, 24);
 static const Score Doubled  = S(11, 56);
 
-// Connected pawn bonus by opposed, phalanx, #support and rank
-static Score Connected[2][2][3][8];
+// Connected pawn bonus
+static const int Connected[8] = { 0, 13, 24, 18, 65, 100, 175, 330 };
 
 // Strength of pawn shelter for our king by [distance from edge][rank].
 // RANK_1 = 0 is used for files where we have no pawn, or pawn is behind
@@ -126,8 +126,12 @@ INLINE Score pawn_evaluate(const Pos *pos, PawnEntry *e, const int Us)
 
     // Score this pawn
     if (supported | phalanx)
-      score += Connected[opposed][!!phalanx][popcount(supported)][relative_rank_s(Us, s)];
-
+      {
+            int r = relative_rank_s(Us, s);
+            int v = phalanx ? Connected[r] + Connected[r + 1] : 2 * Connected[r];
+            v = 17 * popcount(supported) + (v >> (opposed + 1));
+            score += make_score(v, v * (r - 2) / 4);
+    }
     else if (!neighbours) {
       score -= Isolated;
       e->weakUnopposed[Us] += !opposed;
@@ -144,24 +148,6 @@ INLINE Score pawn_evaluate(const Pos *pos, PawnEntry *e, const int Us)
 
   return score;
 }
-
-
-// pawn_init() initializes some tables needed by evaluation.
-
-void pawn_init(void)
-{
-  static const int Seed[8] = { 0, 13, 24, 18, 65, 100, 175, 330 };
-
-  for (int opposed = 0; opposed < 2; opposed++)
-    for (int phalanx = 0; phalanx < 2; phalanx++)
-      for (int support = 0; support <= 2; support++)
-        for (int r = RANK_2; r < RANK_8; ++r) {
-          int v = 17 * support;
-          v += (Seed[r] + (phalanx ? (Seed[r + 1] - Seed[r]) / 2 : 0)) >> opposed;
-          Connected[opposed][phalanx][support][r] = make_score(v, v * (r-2) / 4);
-      }
-}
-
 
 // pawns_probe() looks up the current position's pawns configuration in
 // the pawns hash table.

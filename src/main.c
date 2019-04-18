@@ -40,7 +40,6 @@ int main(int argc, char **argv)
   zob_init();
   bitbases_init();
   search_init();
-  pawn_init();
   endgames_init();
   threads_init();
   options_init();
