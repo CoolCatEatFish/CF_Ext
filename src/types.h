@@ -78,11 +78,6 @@
 #  include <nmmintrin.h> // Intel and Microsoft header for _mm_popcnt_u64()
 #endif
 
-#if defined(USE_BMI1) && (defined(__INTEL_COMPILER) || defined(_MSC_VER))
-#  include <immintrin.h>
-#endif
-
-
 #if !defined(NO_PREFETCH) && (defined(__INTEL_COMPILER) || defined(_MSC_VER))
 #  include <xmmintrin.h> // Intel and Microsoft header for _mm_prefetch()
 #endif
@@ -104,12 +99,6 @@
 #define HasPext 1
 #else
 #define HasPext 0
-#endif
-
-#ifdef USE_BMI1
-#define USE_BMI1 1
-#else
-#define USE_BMI1 0
 #endif
 
 #ifdef IS_64BIT
@@ -186,7 +175,7 @@ enum {
 };
 
 enum {
-  PawnValueMg   = 136,   PawnValueEg   = 208,
+  PawnValueMg   = 128,   PawnValueEg   = 213,
   KnightValueMg = 782,   KnightValueEg = 865,
   BishopValueMg = 830,   BishopValueEg = 918,
   RookValueMg   = 1289,  RookValueEg   = 1378,
