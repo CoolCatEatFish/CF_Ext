@@ -111,7 +111,7 @@ INLINE Score pawn_evaluate(const Pos *pos, PawnEntry *e, const int Us)
     // which could become passed after one or two pawn pushes when they
     // are not attacked more times than defended.
     if (   !(stoppers ^ lever ^ leverPush)
-        && popcount(supported) >= popcount(lever) - 1
+        && (supported || !more_than_one(lever))
         && popcount(phalanx)   >= popcount(leverPush))
       e->passedPawns[Us] |= sq_bb(s);
 
@@ -171,8 +171,7 @@ void pawn_entry_fill(const Pos *pos, PawnEntry *e, Key key)
   e->key = key;
   e->score = pawn_evaluate(pos, e, WHITE) - pawn_evaluate(pos, e, BLACK);
   e->openFiles = popcount(e->semiopenFiles[WHITE] & e->semiopenFiles[BLACK]);
-  e->asymmetry = popcount(e->passedPawns[WHITE] | e->passedPawns[BLACK]
-                        | (e->semiopenFiles[WHITE] ^ e->semiopenFiles[BLACK]));
+  e->passedCount = popcount(e->passedPawns[WHITE] | e->passedPawns[BLACK]);
 }
 
 

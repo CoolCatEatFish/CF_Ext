@@ -58,14 +58,12 @@ static bool is_KXK(const Pos *pos, int us)
 static bool is_KBPsK(const Pos *pos, int us)
 {
   return   pos_non_pawn_material(us) == BishopValueMg
-        && pieces_cp(us, BISHOP)
         && pieces_cp(us, PAWN);
 }
 
 static bool is_KQKRPs(const Pos *pos, int us) {
   return  !piece_count(us, PAWN)
         && pos_non_pawn_material(us) == QueenValueMg
-        && pieces_cp(us, QUEEN)
         && piece_count(us ^ 1, ROOK) == 1
         && pieces_cp(us ^ 1, PAWN);
 }
