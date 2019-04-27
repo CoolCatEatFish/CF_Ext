@@ -149,10 +149,8 @@ Value search_NonPV(Pos *pos, Stack *ss, Value alpha, Depth depth, int cutNode)
         if (!is_capture_or_promotion(pos, ttMove))
           update_stats(pos, ss, ttMove, NULL, 0, stat_bonus(depth));
 
-        // Extra penalty for a quiet TT or main killer move in previous ply
-        // when it gets refuted
-        if (  ((ss-1)->moveCount == 1 || (ss-1)->currentMove == (ss-1)->killers[0])
-            && !captured_piece())
+        // Extra penalty for early quiet moves of the previous ply
+        if ((ss-1)->moveCount <= 2 && !captured_piece())
           update_cm_stats(ss-1, piece_on(prevSq), prevSq,
               -stat_bonus(depth + ONE_PLY));
       }

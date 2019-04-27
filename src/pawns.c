@@ -34,7 +34,7 @@ static const Score Backward = S( 9, 24);
 static const Score Doubled  = S(11, 56);
 
 // Connected pawn bonus
-static const int Connected[8] = { 0, 13, 24, 18, 65, 100, 175, 330 };
+static const int Connected[8] = { 0, 13, 17, 24, 59, 96, 171 };
 
 // Strength of pawn shelter for our king by [distance from edge][rank].
 // RANK_1 = 0 is used for files where we have no pawn, or pawn is behind
@@ -87,6 +87,7 @@ INLINE Score pawn_evaluate(const Pos *pos, PawnEntry *e, const int Us)
     assert(piece_on(s) == make_piece(Us, PAWN));
 
     uint32_t f = file_of(s);
+    int r = relative_rank_s(Us, s);
 
     e->semiopenFiles[Us] &= ~(1 << f);
     e->pawnAttacksSpan[Us] |= pawn_attack_span(Us, s);
@@ -115,8 +116,7 @@ INLINE Score pawn_evaluate(const Pos *pos, PawnEntry *e, const int Us)
         && popcount(phalanx)   >= popcount(leverPush))
       e->passedPawns[Us] |= sq_bb(s);
 
-    else if (   stoppers == sq_bb(s + Up)
-             && relative_rank_s(Us, s) >= RANK_5)
+    else if (stoppers == sq_bb(s + Up) && r >= RANK_5)
     {
       b = shift_bb(Up, supported) & ~theirPawns;
       while (b)
@@ -127,8 +127,7 @@ INLINE Score pawn_evaluate(const Pos *pos, PawnEntry *e, const int Us)
     // Score this pawn
     if (supported | phalanx)
       {
-            int r = relative_rank_s(Us, s);
-            int v = phalanx ? Connected[r] + Connected[r + 1] : 2 * Connected[r];
+            int v = (phalanx ? 3 : 2) * Connected[r];
             v = 17 * popcount(supported) + (v >> (opposed + 1));
             score += make_score(v, v * (r - 2) / 4);
       }
