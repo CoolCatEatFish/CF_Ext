@@ -443,12 +443,13 @@ INLINE Score evaluate_king(const Pos *pos, EvalInfo *ei, Score *mobility,
                +  69 * ei->kingAttacksCount[Them]
                + 185 * popcount(ei->kingRing[Us] & weak)
                - 100 * !!(ei->attackedBy[Us][KNIGHT] & ei->attackedBy[Us][KING])
+               -  35 * !!(ei->attackedBy[Us][BISHOP] & ei->attackedBy[Us][KING])
                + 150 * popcount(blockers_for_king(pos, Us) | unsafeChecks)
                - 873 * !pieces_cp(Them, QUEEN)
                -   6 * mg_value(score) / 8
                +       mg_value(mobility[Them] - mobility[Us])
                +   5 * kingFlankAttacks * kingFlankAttacks / 16
-               -  15;
+               -   7;
 
   // Transform the kingDanger units into a Score, and subtract it from
   // the evaluation
@@ -690,7 +691,7 @@ INLINE Score evaluate_space(const Pos *pos, EvalInfo *ei, const int Us)
 
   // ...count safe + (behind & safe) with a single popcount.
   int bonus = popcount((Us == WHITE ? safe << 32 : safe >> 32) | (behind & safe));
-  int weight = popcount(pieces_c(Us)) - 2 * ei->pe->openFiles;
+  int weight = popcount(pieces_c(Us)) - (16 - popcount(pieces_p(PAWN))) / 4;
 
   return make_score(bonus * weight * weight / 16, 0);
 }
