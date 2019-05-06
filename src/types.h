@@ -82,6 +82,10 @@
 #  include <xmmintrin.h> // Intel and Microsoft header for _mm_prefetch()
 #endif
 
+#if defined(USE_BMI1)
+#  include <immintrin.h>
+#endif
+
 #if defined(USE_PEXT)
 #  include <immintrin.h> // Header for _pext_u64() intrinsic
 #  define pext(b, m) _pext_u64(b, m)
@@ -105,6 +109,12 @@
 #define Is64Bit 1
 #else
 #define Is64Bit 0
+#endif
+
+#ifdef USE_BMI1
+#define USE_BMI1 1
+#else
+#define USE_BMI1 0
 #endif
 
 #ifdef NUMA

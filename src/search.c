@@ -227,6 +227,7 @@ void mainthread_search(void)
   const char *s = option_string_value(OPT_ANALYSIS_CONTEMPT);
   if (Limits.infinite || option_value(OPT_ANALYSE_MODE))
     base_ct =  strcmp(s, "off") == 0 ? 0
+             : strcmp(s, "both") == 0 ? base_ct
              : strcmp(s, "white") == 0 && us == BLACK ? -base_ct
              : strcmp(s, "black") == 0 && us == WHITE ? -base_ct
              : base_ct;
@@ -380,7 +381,11 @@ void thread_search(Pos *pos)
   if (pos->threadIdx == 0)
     mainThread.bestMoveChanges = 0;
 
+  char ICCF;
+  ICCF = option_value(OPT_ICCF_Analyzes);
   int multiPV = option_value(OPT_MULTI_PV);
+  if (ICCF) multiPV = ((size_t)pow(2, ICCF));
+  if (option_value(OPT_WIDESEARCH)) multiPV=64;
 #if 0
   Skill skill(option_value(OPT_SKILL_LEVEL));
 
@@ -444,7 +449,7 @@ void thread_search(Pos *pos)
         beta  = min(previousScore + delta,  VALUE_INFINITE);
 
         // Adjust contempt based on root move's previousScore
-        int ct = base_ct + 88 * previousScore / (abs(previousScore) + 200);
+        int ct = base_ct + (base_ct ? 88 * previousScore / (abs(previousScore) + 200) : 0);
         pos->contempt = pos_stm() == WHITE ?  make_score(ct, ct / 2)
                                            : -make_score(ct, ct / 2);
       }

@@ -56,7 +56,7 @@ void print_engine_info(int to_uci)
 {
   char my_date[64];
 
-  printf("Cfish %s", Version);
+  printf("CF EXT %s", Version);
 
   if (strlen(Version) == 0) {
     int day, month, year;
@@ -72,8 +72,8 @@ void print_engine_info(int to_uci)
     printf("%02d%02d%02d", day, month, year % 100);
   }
 
-  printf("%s%s%s%s\n", Is64Bit ? " 64" : ""
-                     , HasPext ? " BMI2" : (HasPopCnt ? " POPCNT" : "")
+  printf("%s%s%s%s\n", Is64Bit ? " x64" : " x32"
+                     , HasPext ? " BMI2" : (USE_BMI1 ? " BMI1" : (HasPopCnt ? " POP" : ""))
                      , HasNuma ? " NUMA" : ""
                      , to_uci ? "\nid author T. Romstad, M. Costalba, "
                                 "J. Kiiski, G. Linscott"
