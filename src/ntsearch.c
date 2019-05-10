@@ -496,7 +496,7 @@ moves_loop: // When in check search starts from here.
           continue;
 
         // Reduced depth of the next LMR search
-        int lmrDepth = max(newDepth - reduction(improving, depth, moveCount, NT), DEPTH_ZERO);
+        int lmrDepth = max(newDepth - reduction(improving, depth, moveCount), DEPTH_ZERO);
         lmrDepth /= ONE_PLY;
 
         // Countermoves based pruning
@@ -545,16 +545,16 @@ moves_loop: // When in check search starts from here.
     // Step 16. Reduced depth search (LMR). If the move fails high it will be
     // re-searched at full depth.
     if (   option_value(OPT_LMR) && depth >= 3 * ONE_PLY
-        &&  moveCount > 1
+        &&  moveCount > 1 + 3 * rootNode
         && (  !captureOrPromotion
               || moveCountPruning
               || ss->staticEval + PieceValue[EG][captured_piece()] <= alpha))
     {
-      Depth r = reduction(improving, depth, moveCount, NT);
+      Depth r = reduction(improving, depth, moveCount);
 
       // Decrease reduction if position is or has been on the PV
       if (ttPv)
-        r -= ONE_PLY;
+        r -= 2 * ONE_PLY;
 
       // Decrease reduction if opponent's move count is high.
       if ((ss-1)->moveCount > 15)
