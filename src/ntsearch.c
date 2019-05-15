@@ -375,6 +375,7 @@ moves_loop: // When in check search starts from here.
 
   moveCountPruning = 0;
   ttCapture = ttMove && is_capture_or_promotion(pos, ttMove);
+  int singularExtensionLMRmultiplier = 0;
 
   // Step 12. Loop through moves
   // Loop through all pseudo-legal moves until no moves remain or a beta
@@ -444,7 +445,12 @@ moves_loop: // When in check search starts from here.
       ss->excludedMove = 0;
 
       if (value < singularBeta)
-        extension = ONE_PLY;
+          {
+          extension = ONE_PLY;
+          singularExtensionLMRmultiplier++;
+          if (value < singularBeta - min(3 * depth / ONE_PLY, 39))
+          singularExtensionLMRmultiplier++;
+          }
 
       // Multi-cut pruning. Our ttMove is assumed to fail high, and now we
       // failed high also on a reduced search without the ttMove. So we
@@ -559,6 +565,8 @@ moves_loop: // When in check search starts from here.
       // Decrease reduction if opponent's move count is high.
       if ((ss-1)->moveCount > 15)
         r -= ONE_PLY;
+      // Decrease reduction if move has been singularly extended
+        r -= singularExtensionLMRmultiplier * ONE_PLY;
 
       if (!captureOrPromotion) {
         // Increase reduction if ttMove is a capture
