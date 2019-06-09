@@ -108,10 +108,7 @@ void material_entry_fill(const Pos *pos, MaterialEntry *e, Key key)
   e->factor[WHITE] = e->factor[BLACK] = (uint8_t)SCALE_FACTOR_NORMAL;
 
   Value npm = pos_non_pawn_material(WHITE) + pos_non_pawn_material(BLACK);
-  if (npm > MidgameLimit)
-      npm = MidgameLimit;
-  if (npm < EndgameLimit)
-      npm = EndgameLimit;
+  npm = clamp(npm, EndgameLimit, MidgameLimit);
   e->gamePhase = ((npm - EndgameLimit) * PHASE_MIDGAME) / (MidgameLimit - EndgameLimit);
 
   // Look for a specialized evaluation function.

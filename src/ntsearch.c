@@ -21,7 +21,7 @@ Value search_NonPV(Pos *pos, Stack *ss, Value alpha, Depth depth, int cutNode)
   if (   pos->st->pliesFromNull >= 3
       && alpha < VALUE_DRAW
       && !rootNode
-      && has_game_cycle(pos))
+      && has_game_cycle(pos, ss->ply))
   {
 #if PvNode
       alpha = value_draw(depth, pos);
@@ -114,13 +114,13 @@ Value search_NonPV(Pos *pos, Stack *ss, Value alpha, Depth depth, int cutNode)
   assert(0 <= ss->ply && ss->ply < MAX_PLY);
 
   (ss+1)->excludedMove = bestMove = 0;
-  ss->history = &(*pos->counterMoveHistory)[0][0];
+//  ss->history = &(*pos->counterMoveHistory)[0][0];
   (ss+2)->killers[0] = (ss+2)->killers[1] = 0;
   Square prevSq = to_sq((ss-1)->currentMove);
   if (rootNode)
-		(ss + 4)->statScore = 0;
-	else
-		(ss + 2)->statScore = 0;
+    (ss+4)->statScore = 0;
+  else
+    (ss+2)->statScore = 0;
 
   // Step 4. Transposition table lookup. We don't want the score of a
   // partial search to overwrite a previous full search TT value, so we
@@ -152,7 +152,8 @@ Value search_NonPV(Pos *pos, Stack *ss, Value alpha, Depth depth, int cutNode)
         if (!is_capture_or_promotion(pos, ttMove))
           update_stats(pos, ss, ttMove, NULL, 0, stat_bonus(depth));
 
-        // Extra penalty for early quiet moves of the previous ply
+        // Extra penalty for a quiet TT or main killer move in previous ply
+        // when it gets refuted
         if ((ss-1)->moveCount <= 2 && !captured_piece())
           update_cm_stats(ss-1, piece_on(prevSq), prevSq,
               -stat_bonus(depth + ONE_PLY));
@@ -245,11 +246,11 @@ Value search_NonPV(Pos *pos, Stack *ss, Value alpha, Depth depth, int cutNode)
       ss->staticEval = eval = -(ss-1)->staticEval + 2 * Tempo;
 
     tte_save(tte, posKey, VALUE_NONE, ttPv, BOUND_NONE, DEPTH_NONE, 0,
-             ss->staticEval, tt_generation());
+             eval, tt_generation());
   }
 
   // Step 7. Razoring
-  if ( option_value(OPT_RAZORING) && !rootNode
+  if (  option_value(OPT_RAZORING) && !rootNode
       && depth < 2 * ONE_PLY
       && eval <= alpha - RazorMargin)
     return PvNode ? qsearch_PV_false(pos, ss, alpha, beta, DEPTH_ZERO)
@@ -300,7 +301,7 @@ Value search_NonPV(Pos *pos, Stack *ss, Value alpha, Depth depth, int cutNode)
       // Do verification search at high depths
       // Disable null move pruning for side to move for the first part of
       // the remaining search tree
-      pos->nmpPly = ss->ply + 3 * (depth-R) / 4;
+      pos->nmpPly = ss->ply + 3 * (depth-R) / (4 * ONE_PLY);
       pos->nmpOdd = ss->ply & 1;
 
       Value v = search_NonPV(pos, ss, beta-1, depth-R, 0);
@@ -351,9 +352,7 @@ Value search_NonPV(Pos *pos, Stack *ss, Value alpha, Depth depth, int cutNode)
   }
 
   // Step 11. Internal iterative deepening
-  if (    depth >= 8 * ONE_PLY
-      && !ttMove)
-  {
+  if (depth >= 8 * ONE_PLY && !ttMove) {
     if (PvNode)
       search_PV(pos, ss, alpha, beta, depth - 7 * ONE_PLY);
     else
@@ -371,10 +370,11 @@ moves_loop: // When in check search starts from here.
   PieceToHistory *fmh2 = (ss-4)->history;
 
   mp_init(pos, ttMove, depth);
-  value = bestValue; // Workaround a bogus 'uninitialized' warning under gcc
 
+  value = bestValue; // Workaround a bogus 'uninitialized' warning under gcc
   moveCountPruning = 0;
   ttCapture = ttMove && is_capture_or_promotion(pos, ttMove);
+  int singularExtensionLMRMultiplier = 0;
 
   // Step 12. Loop through moves
   // Loop through all pseudo-legal moves until no moves remain or a beta
@@ -436,15 +436,19 @@ moves_loop: // When in check search starts from here.
         &&  is_legal(pos, move))
     {
       Value singularBeta = ttValue - 2 * depth / ONE_PLY;
-      Depth halfDepth = depth / (2 * ONE_PLY) * ONE_PLY; // ONE_PLY invariant
+      Depth halfDepth = depth / (2 * ONE_PLY) * ONE_PLY;
       ss->excludedMove = move;
       Move cm = ss->countermove;
       Move k1 = ss->mpKillers[0], k2 = ss->mpKillers[1];
       value = search_NonPV(pos, ss, singularBeta - 1, halfDepth, cutNode);
       ss->excludedMove = 0;
 
-      if (value < singularBeta)
+      if (value < singularBeta) {
         extension = ONE_PLY;
+        singularExtensionLMRMultiplier++;
+        if (value < singularBeta - min(3 * depth / ONE_PLY, 39))
+          singularExtensionLMRMultiplier++;
+      }
 
       // Multi-cut pruning. Our ttMove is assumed to fail high, and now we
       // failed high also on a reduced search without the ttMove. So we
@@ -469,11 +473,18 @@ moves_loop: // When in check search starts from here.
     else if (type_of_m(move) == CASTLING)
       extension = ONE_PLY;
 
+    // Shuffle extension
+    else if (   PvNode
+             && pos_rule50_count() > 18
+             && depth < 3 * ONE_PLY
+             && ss->ply < 3 * pos->rootDepth / ONE_PLY)
+      extension = ONE_PLY;
+
     // Passed pawn extension
-      else if (   move == ss->killers[0]
-               && advanced_pawn_push(pos, move)
-               && pawn_passed(pos, pos_stm(), to_sq(move)))
-          extension = ONE_PLY;
+    else if (   move == ss->killers[0]
+             && advanced_pawn_push(pos, move)
+             && pawn_passed(pos, pos_stm(), to_sq(move)))
+      extension = ONE_PLY;
 
     // Calculate new depth for this move
     newDepth = depth - ONE_PLY + extension;
@@ -496,8 +507,7 @@ moves_loop: // When in check search starts from here.
           continue;
 
         // Reduced depth of the next LMR search
-        int lmrDepth = max(newDepth - reduction(improving, depth, moveCount), DEPTH_ZERO);
-        lmrDepth /= ONE_PLY;
+        int lmrDepth = max(newDepth - reduction(improving, depth, moveCount), DEPTH_ZERO) / ONE_PLY;
 
         // Countermoves based pruning
         if (   lmrDepth < 3 + ((ss-1)->statScore > 0 || (ss-1)->moveCount == 1)
@@ -513,8 +523,7 @@ moves_loop: // When in check search starts from here.
 
         // Prune moves with negative SEE at low depths and below a decreasing
         // threshold at higher depths.
-        if (   !extension
-            && !see_test(pos, move, -29 * lmrDepth * lmrDepth))
+        if (!see_test(pos, move, -29 * lmrDepth * lmrDepth))
           continue;
       }
 //      else if (   depth < 7 * ONE_PLY && ss->stage != ST_GOOD_CAPTURES
@@ -546,9 +555,9 @@ moves_loop: // When in check search starts from here.
     // re-searched at full depth.
     if (   option_value(OPT_LMR) && depth >= 3 * ONE_PLY
         &&  moveCount > 1 + 3 * rootNode
-        && (  !captureOrPromotion
-              || moveCountPruning
-              || ss->staticEval + PieceValue[EG][captured_piece()] <= alpha))
+        && (   !captureOrPromotion
+            || moveCountPruning
+            || ss->staticEval + PieceValue[EG][captured_piece()] <= alpha))
     {
       Depth r = reduction(improving, depth, moveCount);
 
@@ -556,9 +565,12 @@ moves_loop: // When in check search starts from here.
       if (ttPv)
         r -= 2 * ONE_PLY;
 
-      // Decrease reduction if opponent's move count is high.
+      // Decrease reduction if opponent's move count is high
       if ((ss-1)->moveCount > 15)
         r -= ONE_PLY;
+
+      // Decrease reduction if move has been singularly extended
+      r -= singularExtensionLMRMultiplier * ONE_PLY;
 
       if (!captureOrPromotion) {
         // Increase reduction if ttMove is a capture
@@ -661,8 +673,8 @@ moves_loop: // When in check search starts from here.
         // We record how often the best move has been changed in each
         // iteration. This information is used for time management: When
         // the best move changes frequently, we allocate some more time.
-        if (moveCount > 1 && pos->threadIdx == 0)
-          mainThread.bestMoveChanges++;
+        if (moveCount > 1)
+          pos->bestMoveChanges++;
       } else
         // All other moves but the PV are set to the lowest value: this is
         // not a problem when sorting because the sort is stable and the
